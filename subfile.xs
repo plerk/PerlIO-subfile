@@ -61,7 +61,7 @@ PerlIOSubfile_seek(PerlIO *f, Off_t offset, int whence)
 	       (int) code);
 #endif
 
-  assert (PerlIOBuf_tell(f) => s->start);
+  assert (PerlIOBuf_tell(f) >= s->start);
   return code;
 }
 
@@ -77,7 +77,7 @@ PerlIOSubfile_tell (PerlIO *f)
 	       f, (UV)real, (UV)(real-s->start), (UV)s->start, (UV)s->end);
 #endif
 
-  assert (real => s->start);
+  assert (real >= s->start);
   assert (s->end == 0 || (real < s->end));
 
   return real - s->start;
@@ -141,7 +141,7 @@ PerlIOSubfile_pushed(PerlIO *f, const char *mode, SV *arg)
   const char *argstr;
   bool is_UV;
 
-  if (arg) {
+  if (arg && SvOK(arg)) {
     if (SvIOK(arg) && !SvPOK(arg))
       len = is_UV = 1;
     else {
@@ -250,7 +250,7 @@ PerlIOSubfile_pushed(PerlIO *f, const char *mode, SV *arg)
               IV code = PerlIOBuf_seek(f, offset, SEEK_SET);
               if (code)
                 return code;
-              assert (PerlIOBuf_tell(f) == s->start);
+              assert (PerlIOBuf_tell(f) == offset);
               s->start = offset;
 #if DEBUG_LAYERSUBFILE
               PerlIO_debug("  abs start now %08"UVxf" %08"UVxf"\n",

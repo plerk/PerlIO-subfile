@@ -9,3 +9,13 @@ Revision history for Perl extension PerlIO::subfile.
       As the pushed argument is now an SV, allow an SV that is an IV/UV
       (but not a PV) is treated as a relative end value. (which will make
       things easier for ex::lib::zip
+
+0.03  Sun Aug 26 12:05:12 BST 2001
+      By 5.7.2 it seems that the pushed argument is passed in as &sv_undef
+      rather than NULL. I wasn't testing SvOK() and was getting use of
+      uninitialized value errors.
+      Changed tests to use Test::More, set $!=0 whenever we report it on !ok().
+      Fixed test "Binmode should take us to the start of the subfile" to
+      actually test tell(), rather than another needless seek.
+      Fixed => to => in two of the assertions. Fixed a bug in another assertion.
+      Looks like I'd not built against a -g perl for a while.

@@ -1,9 +1,9 @@
-PerlIO/subfile version 0.05
+PerlIO/subfile version 0.06
 ===========================
 
 A layer for the PerlIO system to limit you to subsection of a file.
 
-YOU NEED PERL 5.7.3 or later. 5.8 will do just fine.
+YOU NEED PERL 5.8.0 or later.
 
 Currently read only.
 
@@ -33,7 +33,7 @@ To install this module type the following:
 
 DEPENDENCIES
 
-This module requires perl 5.7.3 or later compiler with PerlIO.
+This module requires perl 5.8.0 or later compiler with PerlIO.
 (which is now the default)
 
 COPYRIGHT AND LICENCE

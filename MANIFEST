@@ -4,4 +4,4 @@ Makefile.PL
 README
 subfile.pm
 subfile.xs
-test.pl
+t/test.t

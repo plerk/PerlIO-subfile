@@ -132,7 +132,7 @@ PerlIOSubfile_getarg(PerlIO *f, CLONE_PARAMS *param, int flags)
 }
 
 static IV
-PerlIOSubfile_pushed(PerlIO *f, const char *mode, SV *arg)
+PerlIOSubfile_pushed(PerlIO *f, const char *mode, SV *arg, PerlIO_funcs *tab)
 {
   IV code = 0;
   PerlIOSubfile *s = PerlIOSelf(f,PerlIOSubfile);
@@ -165,7 +165,7 @@ PerlIOSubfile_pushed(PerlIO *f, const char *mode, SV *arg)
   }
 #endif
 
-  code = PerlIOBuf_pushed(f,mode,&PL_sv_undef);
+  code = PerlIOBuf_pushed(f,mode,&PL_sv_undef,tab);
   if (code)
     return code;
 
@@ -186,7 +186,7 @@ PerlIOSubfile_pushed(PerlIO *f, const char *mode, SV *arg)
       dTHX;       /* fetch context */
 
       while (1) {
-        const char *comma = memchr (argstr, ',', len);
+        const char *comma = memchr (argstr, ',', end - argstr);
         STRLEN this_len = comma ? (comma - argstr) : (end - argstr);
         const char *value = memchr (argstr, '=', this_len);
 
@@ -292,12 +292,14 @@ PerlIO_write_fail(PerlIO *f, const void *vbuf, Size_t count)
 }
 
 PerlIO_funcs PerlIO_subfile = {
+ sizeof(PerlIO_funcs),
  "subfile",
  sizeof(PerlIOSubfile),
  PERLIO_K_BUFFERED,
  PerlIOSubfile_pushed,
  PerlIOBase_noop_ok,
  PerlIOBuf_open,
+ PerlIOBase_binmode,
  PerlIOSubfile_getarg,
  PerlIOBase_fileno,
  PerlIOBuf_dup,

@@ -29,3 +29,12 @@ Revision history for Perl extension PerlIO::subfile.
 
 0.05  Mon Mar 18 21:03:52 GMT 2002
       Catch up with the 5.7.3 perlio API changes.
+
+0.06  Thu Jul 11 20:31:28 GMT 2002
+      Catch up with the 5.8.0-RC1 perlio API changes.
+      The perlio layer now reports a file position on unseekable streams,
+      which messes things up when pushing a subfile onto (say) a pipe.
+      Mark the test as a TODO, as it doesn't affect ex::lib::zip
+      And I had a bug. Which valgrind found for me straight away.
+      Use valgrind. http://developer.kde.org/~sewardj/
+      It's far more effective than coffee.

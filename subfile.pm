@@ -4,9 +4,9 @@ use 5.007001;
 use strict;
 use warnings;
 
-use XSLoader ();
+require XSLoader;
 
-our $VERSION = '0.03';
+our $VERSION = '0.04';
 
 XSLoader::load "PerlIO::subfile", $VERSION;
 
@@ -86,15 +86,12 @@ language level. ex::lib::zip uses this.
 
 This is a lazy implementation.  It adds a whole extra (unneeded) layer of
 buffering.  There ought to be a total re-write to make most methods just call
-the parent, with (probably) only read and seek suitably clipped.
+the parent, with (probably) only read and seek suitably clipped.  Then again,
+as I'm using it for zip files, how many files in zips are stored rather than
+deflated?
 
 It also doesn't do write.  Mainly because I have no need for writes at this
 time.
-
-Even though care was taken not to C<seek> if no start was specified, PerlIO
-is currently inconsistent in what it reports with C<tell> depending on which
-layers you are using for buffering, so using a subfile on an unseekable file
-probably won't work.
 
 =head1 AUTHOR
 

@@ -7,7 +7,7 @@ use Fcntl ':seek';
 
 # change 'tests => 1' to 'tests => last_test_to_print';
 
-use Test::More tests => 42;
+use Test::More tests => 54;
 use PerlIO::subfile;
 ok(1); # If we made it this far, we're ok.
 
@@ -191,28 +191,25 @@ is (eof TEST, 1, "Beyond the end should indicate EOF");
 ok (!defined scalar <TEST>, "should read undef as we are at eof");
 close TEST or die "Can't close file: $!";
 
-while (-f "test") {
-  unlink "test" or die "Can't unlink: $!";
-}
-__END__
-
 # And now, it should all work on a pipe, as long as we don't seek.
 # perl -pe0 might be an alternative to cat on some platforms
 # (platforms which I don't have access to to test on)
 
-# :-( :-( :-( :-( :-( :-( :-( :-( :-( :-( :-( :-( :-( :-( :-( :-( :-(
-#
-# different perlio layers inconsistent when it comes to tell() on pipes
-#
-# :-( :-( :-( :-( :-( :-( :-( :-( :-( :-( :-( :-( :-( :-( :-( :-( :-(
-
-open (PIPE, "cat test|") or die "Can't open pipe: $!";
-is ((read PIPE, $buffer, $caps_length), $caps_length, "Should have skipped the capitals");
-$layerspec = sprintf ":subfile(end=%d)", $lower_length;
-is (binmode (PIPE, $layerspec), 1, sub {"binmode '$layerspec' failed with $!"});
-is (scalar <PIPE>, $lower[0]);
-{
-  local $/;
-  is (<PIPE>, join ('', @lower[1..$#lower]), "Slurp failed");
+foreach my $layer (qw (perlio stdio unix)) {
+  open (PIPE, "-|:$layer", "cat test") or die "Can't open pipe: $!";
+  is ((read PIPE, $buffer, $caps_length), $caps_length,
+      "read $caps_length to skip the capitals, layer $layer");
+  $layerspec = sprintf ":subfile(end=%d)", $lower_length;
+  is (binmode (PIPE, $layerspec), 1, "binmode '$layerspec'")
+    or print "# failed with $!\n";
+  is (scalar <PIPE>, $lower[0], "read first line");
+  {
+    local $/;
+    is (<PIPE>, join ('', @lower[1..$#lower]), "slurp other lines");
+  }
+  close PIPE or die "Can't close pipe: $!";
 }
-close PIPE or die "Can't close pipe: $!";
+
+while (-f "test") {
+  unlink "test" or die "Can't unlink: $!";
+}

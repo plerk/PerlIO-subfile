@@ -19,3 +19,10 @@ Revision history for Perl extension PerlIO::subfile.
       actually test tell(), rather than another needless seek.
       Fixed => to => in two of the assertions. Fixed a bug in another assertion.
       Looks like I'd not built against a -g perl for a while.
+
+0.04  Sat Sep  1 12:25:23 BST 2001
+      Uncommented :subfile-on-a-pipe tests. They now work. (perlio improved).
+      Loop through the tests for 3 layers.
+      Mon Oct 29 20:28:38 GMT 2001
+      perlio.c layer API has changed again with the addition of a dup()
+      function for cloning layers across. (both within and across ithreads)

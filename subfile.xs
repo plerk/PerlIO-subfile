@@ -300,6 +300,7 @@ PerlIO_funcs PerlIO_subfile = {
  PerlIOBuf_open,
  PerlIOSubfile_getarg,
  PerlIOBase_fileno,
+ PerlIOBuf_dup,
  PerlIOBuf_read,
  PerlIOBuf_unread,
  PerlIO_write_fail,

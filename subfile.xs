@@ -1,7 +1,7 @@
 /* -*- c -*- */
 /*    subfile.xs
  *
- *    Copyright (C) 2001, Nicholas Clark
+ *    Copyright (C) 2001-2003, Nicholas Clark
  *
  *    You may distribute this work under the terms of either the GNU General
  *    Public License or the Artistic License, as specified in perl's README
@@ -23,7 +23,7 @@ typedef struct {
 
 
 static IV
-PerlIOSubfile_seek(PerlIO *f, Off_t offset, int whence)
+PerlIOSubfile_seek(pTHX_ PerlIO *f, Off_t offset, int whence)
 {
   IV code;
   PerlIOSubfile *s = PerlIOSelf(f,PerlIOSubfile);
@@ -38,7 +38,7 @@ PerlIOSubfile_seek(PerlIO *f, Off_t offset, int whence)
   if (whence == SEEK_SET)
     offset = new = s->start + offset;
   else if (whence == SEEK_CUR)
-    new = PerlIOBuf_tell(f) + offset;
+    new = PerlIOBuf_tell(aTHX_ f) + offset;
   else if (whence == SEEK_END) {
     offset = new = s->end + offset;
     whence = SEEK_SET;
@@ -54,22 +54,22 @@ PerlIOSubfile_seek(PerlIO *f, Off_t offset, int whence)
     return -1;
   }
 
-  code = PerlIOBuf_seek(f, offset, whence);
+  code = PerlIOBuf_seek(aTHX_ f, offset, whence);
 
 #if DEBUG_LAYERSUBFILE
   PerlIO_debug("  new=%08"UVxf" whence=%d code=%d\n", (UV)new, whence,
 	       (int) code);
 #endif
 
-  assert (PerlIOBuf_tell(f) >= s->start);
+  assert (PerlIOBuf_tell(aTHX_ f) >= s->start);
   return code;
 }
 
 static Off_t
-PerlIOSubfile_tell (PerlIO *f)
+PerlIOSubfile_tell (pTHX_ PerlIO *f)
 {
   PerlIOSubfile *s = PerlIOSelf(f,PerlIOSubfile);
-  Off_t real = PerlIOBuf_tell(f);
+  Off_t real = PerlIOBuf_tell(aTHX_ f);
 
 #if DEBUG_LAYERSUBFILE
   PerlIO_debug("PerlIOSubfile_tell f=%p real=%08"UVxf" return %08"UVxf
@@ -84,10 +84,10 @@ PerlIOSubfile_tell (PerlIO *f)
 }
 
 static IV
-PerlIOSubfile_fill(PerlIO *f)
+PerlIOSubfile_fill(pTHX_ PerlIO *f)
 {
   PerlIOSubfile *s = PerlIOSelf(f,PerlIOSubfile);
-  Off_t real = PerlIOBuf_tell(f);
+  Off_t real = PerlIOBuf_tell(aTHX_ f);
 
 #if DEBUG_LAYERSUBFILE
   PerlIO_debug("PerlIOSubfile_fill f=%p real=%08"UVxf
@@ -97,7 +97,7 @@ PerlIOSubfile_fill(PerlIO *f)
 
   if ((s->end == 0) || (real < s->end)) {
     PerlIOBuf *b = PerlIOSelf(f,PerlIOBuf);
-    IV code = PerlIOBuf_fill(f);
+    IV code = PerlIOBuf_fill(aTHX_ f);
     SSize_t avail;
 
 #if DEBUG_LAYERSUBFILE
@@ -124,7 +124,7 @@ PerlIOSubfile_fill(PerlIO *f)
 }
 
 static SV *
-PerlIOSubfile_getarg(PerlIO *f, CLONE_PARAMS *param, int flags)
+PerlIOSubfile_getarg(pTHX_ PerlIO *f, CLONE_PARAMS *param, int flags)
 {
   PerlIOSubfile *s = PerlIOSelf(f,PerlIOSubfile);
   SV *sv = newSVpvf("start=%08"UVxf",end=%08"UVxf, (UV)s->start, (UV)s->end);
@@ -132,7 +132,8 @@ PerlIOSubfile_getarg(PerlIO *f, CLONE_PARAMS *param, int flags)
 }
 
 static IV
-PerlIOSubfile_pushed(PerlIO *f, const char *mode, SV *arg, PerlIO_funcs *tab)
+PerlIOSubfile_pushed(pTHX_ PerlIO *f, const char *mode, SV *arg,
+		     PerlIO_funcs *tab)
 {
   IV code = 0;
   PerlIOSubfile *s = PerlIOSelf(f,PerlIOSubfile);
@@ -165,11 +166,11 @@ PerlIOSubfile_pushed(PerlIO *f, const char *mode, SV *arg, PerlIO_funcs *tab)
   }
 #endif
 
-  code = PerlIOBuf_pushed(f,mode,&PL_sv_undef,tab);
+  code = PerlIOBuf_pushed(aTHX_ f,mode,&PL_sv_undef,tab);
   if (code)
     return code;
 
-  s->start = PerlIOBuf_tell(f);
+  s->start = PerlIOBuf_tell(aTHX_ f);
   s->end = 0;
 
   if (PerlIOBase(f)->flags & PERLIO_F_CANWRITE)
@@ -237,24 +238,24 @@ PerlIOSubfile_pushed(PerlIO *f, const char *mode, SV *arg, PerlIO_funcs *tab)
 
           if (name_len == 5 && memEQ (argstr, "start", 5)) {
             if (relative) {
-              IV code = PerlIOBuf_seek(f, relative * offset, SEEK_CUR);
+              IV code = PerlIOBuf_seek(aTHX_ f, relative * offset, SEEK_CUR);
               if (code)
                 return code;
-              assert (PerlIOBuf_tell(f) == s->start + relative * offset);
+              assert (PerlIOBuf_tell(aTHX_ f) == s->start + relative * offset);
               s->start += relative * offset;
 #if DEBUG_LAYERSUBFILE
               PerlIO_debug("  rel start now %08"UVxf" %08"UVxf"\n",
-                           (UV)s->start, (UV)PerlIOBuf_tell(f));
+                           (UV)s->start, (UV)PerlIOBuf_tell(aTHX_ f));
 #endif
             } else {
-              IV code = PerlIOBuf_seek(f, offset, SEEK_SET);
+              IV code = PerlIOBuf_seek(aTHX_ f, offset, SEEK_SET);
               if (code)
                 return code;
-              assert (PerlIOBuf_tell(f) == offset);
+              assert (PerlIOBuf_tell(aTHX_ f) == offset);
               s->start = offset;
 #if DEBUG_LAYERSUBFILE
               PerlIO_debug("  abs start now %08"UVxf" %08"UVxf"\n",
-                           (UV)s->start, (UV)PerlIOBuf_tell(f));
+                           (UV)s->start, (UV)PerlIOBuf_tell(aTHX_ f));
 #endif
             }
           } else if (name_len == 3 && memEQ (argstr, "end", 3)) {
@@ -286,7 +287,7 @@ PerlIOSubfile_pushed(PerlIO *f, const char *mode, SV *arg, PerlIO_funcs *tab)
 }
 
 static SSize_t
-PerlIO_write_fail(PerlIO *f, const void *vbuf, Size_t count)
+PerlIO_write_fail(pTHX_ PerlIO *f, const void *vbuf, Size_t count)
 {
   return -1;
 }
@@ -327,4 +328,4 @@ MODULE = PerlIO::subfile		PACKAGE = PerlIO::subfile
 PROTOTYPES: DISABLE
 
 BOOT:
-	PerlIO_define_layer(&PerlIO_subfile);
+	PerlIO_define_layer(aTHX_ &PerlIO_subfile);

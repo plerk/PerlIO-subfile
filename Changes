@@ -38,3 +38,8 @@ Revision history for Perl extension PerlIO::subfile.
       And I had a bug. Which valgrind found for me straight away.
       Use valgrind. http://developer.kde.org/~sewardj/
       It's far more effective than coffee.
+
+0.07  Fri Jul  4 22:52:08 BST 2003
+      Wow! It seems that I never tested this with a threaded perl build.
+      How lax. Neither did CPAN testers. And strangely, PerlIO-gzip had been
+      tested with a threaded build, because all the macros are correct there.

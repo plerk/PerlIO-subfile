@@ -123,21 +123,49 @@ PerlIOSubfile_fill(PerlIO *f)
   return -1;
 }
 
+static SV *
+PerlIOSubfile_getarg(PerlIO *f)
+{
+  PerlIOSubfile *s = PerlIOSelf(f,PerlIOSubfile);
+  SV *sv = newSVpvf("start=%08"UVxf",end=%08"UVxf, (UV)s->start, (UV)s->end);
+  return sv ? sv : &PL_sv_undef;
+}
+
 static IV
-PerlIOSubfile_pushed(PerlIO *f, const char *mode, const char *arg, STRLEN len)
+PerlIOSubfile_pushed(PerlIO *f, const char *mode, SV *arg)
 {
   IV code = 0;
   PerlIOSubfile *s = PerlIOSelf(f,PerlIOSubfile);
+
+  STRLEN len;	/* This is effectively also a flag: 0 means "no arguments" */
+  const char *argstr;
+  bool is_UV;
+
+  if (arg) {
+    if (SvIOK(arg) && !SvPOK(arg))
+      len = is_UV = 1;
+    else {
+      is_UV = 0;
+      argstr = SvPV(arg, len);
+    }
+  } else {
+    argstr = NULL;
+    len = 0;
+  }
 
 #if DEBUG_LAYERSUBFILE
   PerlIO_debug("PerlIOSubfile_pushed f=%p %s %s fl=%08"UVxf" s=%p\n",
 	       f,PerlIOBase(f)->tab->name,(mode) ? mode : "(Null)",
 	       PerlIOBase(f)->flags, s);
-  if (arg)
-    PerlIO_debug("  len=%d arg=%.*s\n", (int)len, (int)len, arg);
+  if (argstr) {
+    if (is_UV)
+      PerlIO_debug("  arg=%08"UVxf"\n", SvUV(arg));
+    else
+      PerlIO_debug("  len=%d argstr=%.*s\n", (int)len, (int)len, argstr);
+  }
 #endif
 
-  code = PerlIOBuf_pushed(f,mode,NULL,0);
+  code = PerlIOBuf_pushed(f,mode,&PL_sv_undef);
   if (code)
     return code;
 
@@ -148,103 +176,110 @@ PerlIOSubfile_pushed(PerlIO *f, const char *mode, const char *arg, STRLEN len)
     return -1;  /* Not having any of the write stuff.  */
 
   if (len) {
-    const char *end = arg + len;
-    dTHX;       /* fetch context */
+    if (is_UV) {
+      s->end = s->start + SvUV(arg);
+#if DEBUG_LAYERSUBFILE
+      PerlIO_debug("  end is %08"UVxf"\n", (UV)s->end);
+#endif
+    } else {
+      const char *end = argstr + len;
+      dTHX;       /* fetch context */
 
-    while (1) {
-      const char *comma = memchr (arg, ',', len);
-      STRLEN this_len = comma ? (comma - arg) : (end - arg);
-      const char *value = memchr (arg, '=', this_len);
+      while (1) {
+        const char *comma = memchr (argstr, ',', len);
+        STRLEN this_len = comma ? (comma - argstr) : (end - argstr);
+        const char *value = memchr (argstr, '=', this_len);
 
 #if DEBUG_LAYERSUBFILE
-      PerlIO_debug("  processing len=%d arg=%.*s value=%p\n",
-		   (int)this_len, (int)this_len, arg, value);
+        PerlIO_debug("  processing len=%d argstr=%.*s value=%p\n",
+                     (int)this_len, (int)this_len, argstr, value);
 #endif
 
-      if (value) { /* value points at the '=' sign.  */
-	STRLEN name_len = (value - arg);
-	int save_errno = errno;
-	int relative = 0;
-	Off_t offset;
+        if (value) { /* value points at the '=' sign.  */
+          STRLEN name_len = (value - argstr);
+          int save_errno = errno;
+          int relative = 0;
+          Off_t offset;
 
-	value++;
-	while (isSPACE(*value))
-	  value++;
-	if (*value == '+') {
-	  relative = 1;
-	  value++;
-	} else if (*value == '-') {
-	  relative = -1;
-	  value++;
-	}
+          value++;
+          while (isSPACE(*value))
+            value++;
+          if (*value == '+') {
+            relative = 1;
+            value++;
+          } else if (*value == '-') {
+            relative = -1;
+            value++;
+          }
 
-	if (!isDIGIT(*value)) {
-	  errno = EINVAL;
-	  return -1;
-	}
+          if (!isDIGIT(*value)) {
+            errno = EINVAL;
+            return -1;
+          }
 
-	errno = 0;
-	offset = Strtoul (value, (char **) &value, 0); /* Guess the base */
-	if (errno)
-	  return -1;
-	errno = save_errno;
+          errno = 0;
+          offset = Strtoul (value, (char **) &value, 0); /* Guess the base */
+          if (errno)
+            return -1;
+          errno = save_errno;
 
-	while (isSPACE(*value))
-	  value++;
-	if (value != (arg + this_len)) {
+          while (isSPACE(*value))
+            value++;
+          if (value != (argstr + this_len)) {
 #if DEBUG_LAYERSUBFILE
-	  PerlIO_debug("  failing this_len=%d arg=%p value=%p, not %p, offset="
-		       "%08"UVxf"\n", (int)this_len, arg, value,
-		       (value + this_len), (UV)offset);
+            PerlIO_debug("  failing this_len=%d argstr=%p value=%p, not %p,"
+                         " offset=%08"UVxf"\n", (int)this_len, argstr, value,
+                         (value + this_len), (UV)offset);
 #endif
-	  errno = EINVAL;
-	  return -1;
-	}
+            errno = EINVAL;
+            return -1;
+          }
 
-	if (name_len == 5 && memEQ (arg, "start", 5)) {
-	  if (relative) {
-	    IV code = PerlIOBuf_seek(f, relative * offset, SEEK_CUR);
-	    if (code)
-	      return code;
-	    assert (PerlIOBuf_tell(f) == s->start + relative * offset);
-	    s->start += relative * offset;
+          if (name_len == 5 && memEQ (argstr, "start", 5)) {
+            if (relative) {
+              IV code = PerlIOBuf_seek(f, relative * offset, SEEK_CUR);
+              if (code)
+                return code;
+              assert (PerlIOBuf_tell(f) == s->start + relative * offset);
+              s->start += relative * offset;
 #if DEBUG_LAYERSUBFILE
-	    PerlIO_debug("  rel start now %08"UVxf" %08"UVxf"\n", (UV)s->start,
-			 (UV)PerlIOBuf_tell(f));
+              PerlIO_debug("  rel start now %08"UVxf" %08"UVxf"\n",
+                           (UV)s->start, (UV)PerlIOBuf_tell(f));
 #endif
-	  } else {
-	    IV code = PerlIOBuf_seek(f, offset, SEEK_SET);
-	    if (code)
-	      return code;
-	    assert (PerlIOBuf_tell(f) == s->start);
-	    s->start = offset;
+            } else {
+              IV code = PerlIOBuf_seek(f, offset, SEEK_SET);
+              if (code)
+                return code;
+              assert (PerlIOBuf_tell(f) == s->start);
+              s->start = offset;
 #if DEBUG_LAYERSUBFILE
-	    PerlIO_debug("  abs start now %08"UVxf" %08"UVxf"\n", (UV)s->start,
-			 (UV)PerlIOBuf_tell(f));
+              PerlIO_debug("  abs start now %08"UVxf" %08"UVxf"\n",
+                           (UV)s->start, (UV)PerlIOBuf_tell(f));
 #endif
-	  }
-	} else if (name_len == 3 && memEQ (arg, "end", 3)) {
-	  if (relative)
-	    s->end = s->start + relative * offset;
-	  else
-	    s->end = offset;
+            }
+          } else if (name_len == 3 && memEQ (argstr, "end", 3)) {
+            if (relative)
+              s->end = s->start + relative * offset;
+            else
+              s->end = offset;
 #if DEBUG_LAYERSUBFILE
-	  PerlIO_debug("  end now %08"UVxf" relative=%d\n", (UV)s->end,
-		       relative);
+            PerlIO_debug("  end now %08"UVxf" relative=%d\n", (UV)s->end,
+                         relative);
 #endif
-	} else {
-	  Perl_warn(aTHX_
-		    "perlio: layer :subfile, unregonised argument \"%.*s\"",
-		    (int)this_len, arg);
-	}
-      } else {
-	Perl_warn(aTHX_
-		  "perlio: layer :subfile, argument \"%.*s\" has no value",
-		  (int)this_len, arg);
+          } else {
+            Perl_warn(aTHX_
+                      "perlio: layer :subfile, unregonised argument \"%.*s\"",
+                      (int)this_len, argstr);
+          }
+        } else {
+          Perl_warn(aTHX_
+                    "perlio: layer :subfile, argument \"%.*s\" has no value",
+                    (int)this_len, argstr);
+        }
+        if (!comma)
+          break;
+        argstr = comma + 1;
       }
-      if (!comma)
-	break;
-      arg = comma + 1;
     }
   }
   return 0;
@@ -260,12 +295,11 @@ PerlIO_funcs PerlIO_subfile = {
  "subfile",
  sizeof(PerlIOSubfile),
  PERLIO_K_BUFFERED,
- PerlIOBase_fileno,
- PerlIOBuf_fdopen,
- PerlIOBuf_open,
- PerlIOBuf_reopen,
  PerlIOSubfile_pushed,
  PerlIOBase_noop_ok,
+ PerlIOBuf_open,
+ PerlIOSubfile_getarg,
+ PerlIOBase_fileno,
  PerlIOBuf_read,
  PerlIOBuf_unread,
  PerlIO_write_fail,
@@ -277,7 +311,7 @@ PerlIO_funcs PerlIO_subfile = {
  PerlIOBase_eof,
  PerlIOBase_error,
  PerlIOBase_clearerr,
- PerlIOBuf_setlinebuf,
+ PerlIOBase_setlinebuf,
  PerlIOBuf_get_base,
  PerlIOBuf_bufsiz,
  PerlIOBuf_get_ptr,

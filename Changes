@@ -4,3 +4,8 @@ Revision history for Perl extension PerlIO::subfile.
 	- original version; created by h2xs 1.21 with options
 		-A -n PerlIO::subfile
 
+0.02  Sat Apr 21 17:39:11 BST 2001
+      Change to use the modified layer API of 5.7.1
+      As the pushed argument is now an SV, allow an SV that is an IV/UV
+      (but not a PV) is treated as a relative end value. (which will make
+      things easier for ex::lib::zip

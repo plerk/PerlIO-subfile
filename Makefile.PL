@@ -1,11 +1,11 @@
-require 5.007; # Stop perl 5.005 or earler barfing on the v string
-# require 5.7.0;
+require 5.007001; # Stop perl 5.005 or earler barfing on the v string
+# require 5.7.1;
 use ExtUtils::MakeMaker;
 use Config;
 
 unless ($Config{useperlio} eq 'define' and $Config{usesfio} eq 'false') {
   die <<BARF;
-You need perl 5.7.0 or later, configured to use perlio (and not to use sfio)
+You need perl 5.7.1 or later, configured to use perlio (and not to use sfio)
 Yes, this module is currently only suitable for the development branch of
 perl
 
@@ -13,10 +13,9 @@ Note
   1: The features required for layers have only recently been added to
      development perl, so if your doesn't have the header perliol.h it's
      too old
-  2: perlio is not the default Configure choices, as it does not give binary
-     compatibility with previous perl versions. You may need to compile a
-     new perl from source if you are unable to find a perl precompiled with
-     these options.
+  2: The perlio layers API has changed (at least once) between the initial
+     version and 5.7.1, and may well change again. If so, it is quite
+     possible that this module will fail to compile.
 BARF
 }
 # See lib/ExtUtils/MakeMaker.pm for details of how to influence

@@ -1,12 +1,12 @@
 package PerlIO::subfile;
 
-use 5.006;
+use 5.007001;
 use strict;
 use warnings;
 
 use XSLoader ();
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 XSLoader::load "PerlIO::subfile", $VERSION;
 
@@ -76,6 +76,11 @@ Arguments are parsed left to right, so it's possible to specify a range as
     end=+8,start=4
     # end 8 bytes beyond current file position, start at byte 4 of file
 
+
+If you're writing a perl extension in XS, calling PerlIOSubfile_pushed with
+an SV that is SvIOK and not SvPOK, then the argument is treated as a
+relative end= value. This behaviour probably isn't accessible from the perl
+language level. ex::lib::zip uses this.
 
 =head1 BUGS
 

@@ -1,0 +1,7 @@
+Changes
+MANIFEST
+Makefile.PL
+README
+subfile.pm
+subfile.xs
+test.pl

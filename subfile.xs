@@ -124,7 +124,7 @@ PerlIOSubfile_fill(PerlIO *f)
 }
 
 static SV *
-PerlIOSubfile_getarg(PerlIO *f)
+PerlIOSubfile_getarg(PerlIO *f, CLONE_PARAMS *param, int flags)
 {
   PerlIOSubfile *s = PerlIOSelf(f,PerlIOSubfile);
   SV *sv = newSVpvf("start=%08"UVxf",end=%08"UVxf, (UV)s->start, (UV)s->end);

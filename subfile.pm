@@ -1,12 +1,12 @@
 package PerlIO::subfile;
 
-use 5.007001;
+use 5.007003;
 use strict;
 use warnings;
 
 require XSLoader;
 
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 
 XSLoader::load "PerlIO::subfile", $VERSION;
 

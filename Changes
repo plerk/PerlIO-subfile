@@ -26,3 +26,6 @@ Revision history for Perl extension PerlIO::subfile.
       Mon Oct 29 20:28:38 GMT 2001
       perlio.c layer API has changed again with the addition of a dup()
       function for cloning layers across. (both within and across ithreads)
+
+0.05  Mon Mar 18 21:03:52 GMT 2002
+      Catch up with the 5.7.3 perlio API changes.

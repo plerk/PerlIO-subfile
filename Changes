@@ -43,3 +43,6 @@ Revision history for Perl extension PerlIO::subfile.
       Wow! It seems that I never tested this with a threaded perl build.
       How lax. Neither did CPAN testers. And strangely, PerlIO-gzip had been
       tested with a threaded build, because all the macros are correct there.
+
+0.08  Mon Mar 13 23:06:51 GMT 2006
+      It seems that 5.9.x doesn't like me unless I use () for XSLoader::load

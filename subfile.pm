@@ -3,12 +3,13 @@ package PerlIO::subfile;
 use 5.008;
 use strict;
 use warnings;
+use vars '$VERSION';
 
 require XSLoader;
 
-our $VERSION = '0.07';
+$VERSION = '0.08';
 
-XSLoader::load "PerlIO::subfile", $VERSION;
+XSLoader::load ("PerlIO::subfile", $VERSION);
 
 1;
 __END__
@@ -95,7 +96,7 @@ time.
 
 =head1 AUTHOR
 
-Nicholas Clark, E<lt>nick@talking.bollo.cxE<gt>
+Nicholas Clark, E<lt>nwc10+subfile@colon.colondot.netE<gt>
 
 =head1 SEE ALSO
 
